@@ -20,7 +20,7 @@ else
       echo "Numbers greater than 10: $count"
       echo "The sum of each argument: $sum"
       echo "Characters for sum: $( echo $sum | wc -L )"
-      if [ -e $fisier ]
+      if [ -f $fisier ]
       then echo "$count $sum" > out.txt
       fi
       
