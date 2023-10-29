@@ -1,0 +1,3 @@
+testfolder/compunere.txt
+testfolder/level1/compunere2.txt
+testfolder/level1/level2/compunere3.txt
