@@ -1,5 +1,5 @@
-numar litere mici: 8
-numar litere mari: 5
-numar cifre: 4
-numar aparitii caracter: 3
-dimensiune fisier: 17
+numar litere mici: 13472
+numar litere mari: 13393
+numar cifre: 5135
+numar aparitii caracter: 553
+dimensiune fisier: 32999
