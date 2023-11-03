@@ -17,9 +17,9 @@ int getchars(char *string)
     return chars;
 }
 
-int getFileSize(char *path, struct stat *st)
+int getFileSize(int fd, struct stat *st)
 {
-    if(stat(path, st) == -1)
+    if(fstat(fd, st) == -1)
     {
         return -1;
     }
@@ -55,7 +55,7 @@ int main(int argc, char **argv)
     int aparitii_caracter = 0;
 
     struct stat st;
-    int file_size = getFileSize(argv[1], &st);
+    int file_size = getFileSize(input_fd, &st);
 
     while (read(input_fd, &buffer, 1) == 1)
     {
