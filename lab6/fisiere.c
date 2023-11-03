@@ -5,11 +5,13 @@
 #include <ctype.h>
 #include <sys/stat.h>
 
+#define BUFFER_SIZE 4096
+
 int getchars(char *string)
 {
     int chars = 0;
     int i = 0;
-    while(string[i] != 0)
+    while (string[i] != 0)
     {
         chars++;
         i++;
@@ -19,7 +21,7 @@ int getchars(char *string)
 
 int getFileSize(int fd, struct stat *st)
 {
-    if(fstat(fd, st) == -1)
+    if (fstat(fd, st) == -1)
     {
         return -1;
     }
@@ -48,7 +50,7 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    char buffer;
+    char buffer[BUFFER_SIZE];
     int litere_mari = 0;
     int litere_mici = 0;
     int cifre = 0;
@@ -57,20 +59,25 @@ int main(int argc, char **argv)
     struct stat st;
     int file_size = getFileSize(input_fd, &st);
 
-    while (read(input_fd, &buffer, 1) == 1)
+    int reads = 0;
+
+    while ((reads = read(input_fd, buffer, BUFFER_SIZE)) != 0)
     {
-        if (isupper(buffer))
-            litere_mari++;
+        for (int i = 0; i < reads; i++)
+        {
+            if (isupper(buffer[i]))
+                litere_mari++;
 
-        if (islower(buffer))
-            litere_mici++;
+            if (islower(buffer[i]))
+                litere_mici++;
 
-        if (isdigit(buffer))
-            cifre++;
+            if (isdigit(buffer[i]))
+                cifre++;
 
-        char ch = argv[3][0];
-        if(buffer==ch)
-            aparitii_caracter++;    
+            char ch = argv[3][0];
+            if (buffer[i] == ch)
+                aparitii_caracter++;
+        }
     }
 
     char string[50];
