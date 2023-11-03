@@ -1,0 +1,5 @@
+numar litere mici: 8
+numar litere mari: 5
+numar cifre: 4
+numar aparitii caracter: 3
+dimensiune fisier: 17
