@@ -1,0 +1,59 @@
+nume director: .
+identificatorul utilizatorului: 1000
+drepturi de acces user: RWX
+drepturi de acces grup: R-X
+drepturi de acces altii: R-X
+
+nume fisier: s6.c
+dimensiune: 5566
+identificatorul utilizatorului: 1000
+timpul ultimei modificari: 16.11.2023
+contorul de legaturi: 1
+drepturi de acces user: RW-
+drepturi de acces grup: R--
+drepturi de acces altii: R--
+
+nume fisier: p
+dimensiune: 21432
+identificatorul utilizatorului: 1000
+timpul ultimei modificari: 16.11.2023
+contorul de legaturi: 1
+drepturi de acces user: RWX
+drepturi de acces grup: R-X
+drepturi de acces altii: R-X
+
+nume fisier: imagine.bmp
+inaltime: 1920
+lungime: 1280
+dimensiune: 7372938
+identificatorul utilizatorului: 1000
+timpul ultimei modificari: 10.11.2023
+contorul de legaturi: 1
+drepturi de acces user: RW-
+drepturi de acces grup: RW-
+drepturi de acces altii: RW-
+
+nume fisier: statistica_s6.txt
+dimensiune: 258
+identificatorul utilizatorului: 1000
+timpul ultimei modificari: 16.11.2023
+contorul de legaturi: 1
+drepturi de acces user: RW-
+drepturi de acces grup: ---
+drepturi de acces altii: ---
+
+nume director: ..
+identificatorul utilizatorului: 1000
+drepturi de acces user: RWX
+drepturi de acces grup: R-X
+drepturi de acces altii: R-X
+
+nume fisier: s7.c
+dimensiune: 11426
+identificatorul utilizatorului: 1000
+timpul ultimei modificari: 16.11.2023
+contorul de legaturi: 1
+drepturi de acces user: RW-
+drepturi de acces grup: R--
+drepturi de acces altii: R--
+
