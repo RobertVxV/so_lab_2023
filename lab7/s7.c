@@ -14,6 +14,8 @@
 #define WIDTH_OFFSET 18
 #define HEIGHT_OFFSET 22
 
+#define MAX_FILE_PATH 1024
+
 int getChars(char *string)
 {
     int chars = 0;
@@ -36,10 +38,30 @@ int getFileUID(char *filename)
     return st.st_uid;
 }
 
+char *getFileName(char *absolute_path)
+{
+    char *filename = strrchr(absolute_path, '/');
+    if (filename == NULL)
+    {
+        return "ERROR";
+    }
+    return filename + 1; //only filename without '/'
+}
+
 int getFileSize(char *filename)
 {
     struct stat st;
     if (stat(filename, &st) == -1)
+    {
+        return -1;
+    }
+    return st.st_size;
+}
+
+int getLinkSize(char *filename)
+{
+    struct stat st;
+    if (lstat(filename, &st) == -1)
     {
         return -1;
     }
@@ -125,6 +147,60 @@ char *getOthersRightsForFile(char *filename, char *rights)
     return rights;
 }
 
+char *getUserRightsForLink(char *filename, char *rights)
+{
+    struct stat st;
+
+    if (lstat(filename, &st) == -1)
+    {
+        return "ERROR";
+    }
+
+    rights[0] = ((st.st_mode & S_IRUSR) != 0) ? 'R' : '-';
+    rights[1] = ((st.st_mode & S_IWUSR) != 0) ? 'W' : '-';
+    rights[2] = ((st.st_mode & S_IXUSR) != 0) ? 'X' : '-';
+
+    rights[3] = '\0';
+
+    return rights;
+}
+
+char *getGroupRightsForLink(char *filename, char *rights)
+{
+    struct stat st;
+
+    if (lstat(filename, &st) == -1)
+    {
+        return "ERROR";
+    }
+
+    rights[0] = ((st.st_mode & S_IRGRP) != 0) ? 'R' : '-';
+    rights[1] = ((st.st_mode & S_IWGRP) != 0) ? 'W' : '-';
+    rights[2] = ((st.st_mode & S_IXGRP) != 0) ? 'X' : '-';
+
+    rights[3] = '\0';
+
+    return rights;
+}
+
+char *getOthersRightsForLink(char *filename, char *rights)
+{
+    struct stat st;
+
+    if (lstat(filename, &st) == -1)
+    {
+        return "ERROR";
+    }
+
+    rights[0] = ((st.st_mode & S_IROTH) != 0) ? 'R' : '-';
+    rights[1] = ((st.st_mode & S_IWOTH) != 0) ? 'W' : '-';
+    rights[2] = ((st.st_mode & S_IXOTH) != 0) ? 'X' : '-';
+
+    rights[3] = '\0';
+
+    return rights;
+}
+
 int getBMPWidthHeight(int fd, int *width, int *height)
 {
     int res = lseek(fd, WIDTH_OFFSET, SEEK_SET);
@@ -153,6 +229,26 @@ int isRegularFile(char *filename)
         return 0;
     }
     return (st.st_mode & S_IFMT) == S_IFREG;
+}
+
+int isDirectory(char *filename)
+{
+    struct stat st;
+    if (stat(filename, &st) == -1)
+    {
+        return 0;
+    }
+    return (st.st_mode & S_IFMT) == S_IFDIR;
+}
+
+int isSymLink(char *filename)
+{
+    struct stat st;
+    if (lstat(filename, &st) == -1)
+    {
+        return 0;
+    }
+    return S_ISLNK(st.st_mode);
 }
 
 int hasExtension(char *filename, char *extension)
@@ -207,7 +303,7 @@ void processBMPFile(char *input_filename, int output_fd)
         printf("An error has encountered while trying to get the width and height.");
     }
 
-    sprintf(temporary_string, "nume fisier: %s\n", input_filename);
+    sprintf(temporary_string, "nume fisier: %s\n", getFileName(input_filename));
     write(output_fd, temporary_string, getChars(temporary_string));
     sprintf(temporary_string, "inaltime: %d\n", bmp_width);
     write(output_fd, temporary_string, getChars(temporary_string));
@@ -262,7 +358,7 @@ void processRegularFile(char *input_filename, int output_fd)
 
     char temporary_string[50];
 
-    sprintf(temporary_string, "nume fisier: %s\n", input_filename);
+    sprintf(temporary_string, "nume fisier: %s\n", getFileName(input_filename));
     write(output_fd, temporary_string, getChars(temporary_string));
     sprintf(temporary_string, "dimensiune: %d\n", file_size);
     write(output_fd, temporary_string, getChars(temporary_string));
@@ -307,7 +403,7 @@ void processDirectory(char *input_filename, int output_fd)
 
     char temporary_string[50];
 
-    sprintf(temporary_string, "nume director: %s\n", input_filename);
+    sprintf(temporary_string, "nume director: %s\n", getFileName(input_filename));
     write(output_fd, temporary_string, getChars(temporary_string));
     sprintf(temporary_string, "identificatorul utilizatorului: %d\n", file_uid);
     write(output_fd, temporary_string, getChars(temporary_string));
@@ -325,24 +421,46 @@ void processDirectory(char *input_filename, int output_fd)
     }
 }
 
-int isDirectory(char *filename)
+void processSymLink(char *input_filename, int output_fd)
 {
-    struct stat st;
-    if (stat(filename, &st) == -1)
+    int file_descriptor = open(input_filename, O_RDONLY);
+    if (file_descriptor == -1)
     {
-        return 0;
+        printf("Error opening file for reading: %s", input_filename);
+        return;
     }
-    return (st.st_mode & S_IFMT) == S_IFDIR;
-}
 
-int isSymLink(char *filename)
-{
-    struct stat st;
-    if (stat(filename, &st) == -1)
+    int file_size = getFileSize(input_filename);
+    int link_size = getLinkSize(input_filename);
+
+    char user_rights_buffer[4];
+    char group_rights_buffer[4];
+    char others_rights_buffer[4];
+
+    char *user_rights = getUserRightsForLink(input_filename, user_rights_buffer);
+    char *group_rights = getGroupRightsForLink(input_filename, group_rights_buffer);
+    char *others_rights = getOthersRightsForLink(input_filename, others_rights_buffer);
+
+    char temporary_string[50];
+
+    sprintf(temporary_string, "nume legatura: %s\n", getFileName(input_filename));
+    write(output_fd, temporary_string, getChars(temporary_string));
+    sprintf(temporary_string, "dimensiune legatura: %d\n", link_size);
+    write(output_fd, temporary_string, getChars(temporary_string));
+    sprintf(temporary_string, "dimensiune fisier legatura: %d\n", file_size);
+    write(output_fd, temporary_string, getChars(temporary_string));
+    sprintf(temporary_string, "drepturi de acces user legatura: %s\n", user_rights);
+    write(output_fd, temporary_string, getChars(temporary_string));
+    sprintf(temporary_string, "drepturi de acces grup legatura: %s\n", group_rights);
+    write(output_fd, temporary_string, getChars(temporary_string));
+    sprintf(temporary_string, "drepturi de acces altii legatura: %s\n", others_rights);
+    write(output_fd, temporary_string, getChars(temporary_string));
+    write(output_fd, "\n", 1);
+
+    if (close(file_descriptor) != 0)
     {
-        return 0;
+        printf("Eroare la inchiderea fisierului de citire.\n");
     }
-    return (st.st_mode & S_IFMT) == S_IFLNK;
 }
 
 int main(int argc, char **argv)
@@ -369,34 +487,43 @@ int main(int argc, char **argv)
 
     struct dirent *dir_entry = NULL;
 
+    char absolute_path[MAX_FILE_PATH];
+
     while ((dir_entry = readdir(input_dir)) != NULL)
     {
-        printf("testez fisierul: %s\n", dir_entry->d_name);
-        if (isRegularFile(dir_entry->d_name))
+        int size = strlen(argv[1]) + strlen(dir_entry->d_name) + 1;
+        if (size > MAX_FILE_PATH - 1 - 1) // 1 for terminator, 1 for array-1
         {
-            if (hasExtension(dir_entry->d_name, ".bmp"))
+            printf("File path too big for reading.");
+            continue;
+        }
+
+        sprintf(absolute_path, "./%s%s", argv[1], dir_entry->d_name);
+
+        if (isSymLink(absolute_path))
+        {
+            processSymLink(absolute_path, output_fd);
+            continue;
+        }
+
+        if (isRegularFile(absolute_path))
+        {
+            if (hasExtension(absolute_path, ".bmp"))
             {
-                processBMPFile(dir_entry->d_name, output_fd);
+                processBMPFile(absolute_path, output_fd);
+                continue;
             }
             else
             {
-                processRegularFile(dir_entry->d_name, output_fd);
+                processRegularFile(absolute_path, output_fd);
+                continue;
             }
         }
 
-        else if (isSymLink(dir_entry->d_name))
+        if (isDirectory(absolute_path))
         {
-            // processSymLink
-        }
-
-        else if (isDirectory(dir_entry->d_name))
-        {
-            processDirectory(dir_entry->d_name, output_fd);
-        }
-
-        else
-        {
-            // do nothing
+            processDirectory(absolute_path, output_fd);
+            continue;
         }
     }
 
