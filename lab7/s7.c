@@ -45,7 +45,7 @@ char *getFileName(char *absolute_path)
     {
         return "ERROR";
     }
-    return filename + 1; //only filename without '/'
+    return filename + 1; // only filename without '/'
 }
 
 int getFileSize(char *filename)
@@ -500,15 +500,14 @@ int main(int argc, char **argv)
 
         sprintf(absolute_path, "./%s%s", argv[1], dir_entry->d_name);
 
-        if (isSymLink(absolute_path))
-        {
-            processSymLink(absolute_path, output_fd);
-            continue;
-        }
-
         if (isRegularFile(absolute_path))
         {
-            if (hasExtension(absolute_path, ".bmp"))
+            if (isSymLink(absolute_path))
+            {
+                processSymLink(absolute_path, output_fd);
+                continue;
+            }
+            else if (hasExtension(absolute_path, ".bmp"))
             {
                 processBMPFile(absolute_path, output_fd);
                 continue;
