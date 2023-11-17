@@ -505,24 +505,20 @@ int main(int argc, char **argv)
             if (isSymLink(absolute_path))
             {
                 processSymLink(absolute_path, output_fd);
-                continue;
             }
             else if (hasExtension(absolute_path, ".bmp"))
             {
                 processBMPFile(absolute_path, output_fd);
-                continue;
             }
             else
             {
                 processRegularFile(absolute_path, output_fd);
-                continue;
             }
         }
 
-        if (isDirectory(absolute_path))
+        else if (isDirectory(absolute_path))
         {
             processDirectory(absolute_path, output_fd);
-            continue;
         }
     }
 
