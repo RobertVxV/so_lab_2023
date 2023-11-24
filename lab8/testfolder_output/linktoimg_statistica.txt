@@ -1,0 +1,7 @@
+nume legatura: linktoimg.bmp
+dimensiune legatura: 14
+dimensiune fisier legatura: 7372938
+drepturi de acces user legatura: RWX
+drepturi de acces grup legatura: RWX
+drepturi de acces altii legatura: RWX
+

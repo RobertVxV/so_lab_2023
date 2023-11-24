@@ -1,0 +1,9 @@
+nume fisier: p
+dimensiune: 21536
+identificatorul utilizatorului: 1000
+timpul ultimei modificari: 23.11.2023
+contorul de legaturi: 1
+drepturi de acces user: RWX
+drepturi de acces grup: R-X
+drepturi de acces altii: R-X
+

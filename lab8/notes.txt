@@ -1,0 +1,6 @@
+- adaugare director de iesire
+- pentru fiecare fisier din directorul de intrare cate un proces
+- fiecare proces se va ocupa de afisarea statistici.
+- fiecare va crea un fisier statistica nume_intrare_statistica.txt
+- se pune toate statisticile in directorul de iesire
+- la inchierea fiecarui proces fiu acesta va scrie parintelui numar de linii scrise in fisierul statistica.txt

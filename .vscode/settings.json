@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "sysmacros.h": "c",
+        "unistd.h": "c"
+    }
+}

@@ -1,0 +1,7 @@
+nume legatura: link_momente
+dimensiune legatura: 9
+dimensiune fisier legatura: 11213
+drepturi de acces user legatura: RWX
+drepturi de acces grup legatura: RWX
+drepturi de acces altii legatura: RWX
+

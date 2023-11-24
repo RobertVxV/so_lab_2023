@@ -1,0 +1,91 @@
+nume director: .
+identificatorul utilizatorului: 1000
+drepturi de acces user: RWX
+drepturi de acces grup: R-X
+drepturi de acces altii: R-X
+
+nume fisier: p
+dimensiune: 21536
+identificatorul utilizatorului: 1000
+timpul ultimei modificari: 16.11.2023
+contorul de legaturi: 1
+drepturi de acces user: RWX
+drepturi de acces grup: R-X
+drepturi de acces altii: R-X
+
+nume director: ..
+identificatorul utilizatorului: 1000
+drepturi de acces user: RWX
+drepturi de acces grup: R-X
+drepturi de acces altii: R-X
+
+nume fisier: imagine_frumoasa.bmp
+inaltime: 1920
+lungime: 1280
+dimensiune: 7372938
+identificatorul utilizatorului: 1000
+timpul ultimei modificari: 16.11.2023
+contorul de legaturi: 1
+drepturi de acces user: RW-
+drepturi de acces grup: R--
+drepturi de acces altii: R--
+
+nume fisier: executable
+dimensiune: 21432
+identificatorul utilizatorului: 1000
+timpul ultimei modificari: 16.11.2023
+contorul de legaturi: 1
+drepturi de acces user: RWX
+drepturi de acces grup: R-X
+drepturi de acces altii: R-X
+
+nume legatura: linktoimg.bmp
+dimensiune legatura: 14
+dimensiune fisier legatura: 7372938
+drepturi de acces user legatura: RW-
+drepturi de acces grup legatura: R--
+drepturi de acces altii legatura: R--
+
+nume fisier: intamplari_trecute.c
+dimensiune: 5566
+identificatorul utilizatorului: 1000
+timpul ultimei modificari: 16.11.2023
+contorul de legaturi: 1
+drepturi de acces user: RW-
+drepturi de acces grup: R--
+drepturi de acces altii: R--
+
+nume fisier: altceva.txt
+dimensiune: 258
+identificatorul utilizatorului: 1000
+timpul ultimei modificari: 16.11.2023
+contorul de legaturi: 1
+drepturi de acces user: RW-
+drepturi de acces grup: R--
+drepturi de acces altii: R--
+
+nume legatura: link_momente
+dimensiune legatura: 9
+dimensiune fisier legatura: 11213
+drepturi de acces user legatura: RW-
+drepturi de acces grup legatura: R--
+drepturi de acces altii legatura: R--
+
+nume fisier: statistica_s7.txt
+dimensiune: 1856
+identificatorul utilizatorului: 1000
+timpul ultimei modificari: 16.11.2023
+contorul de legaturi: 1
+drepturi de acces user: RW-
+drepturi de acces grup: ---
+drepturi de acces altii: ---
+
+nume fisier: momente.c
+dimensiune: 11213
+identificatorul utilizatorului: 1000
+timpul ultimei modificari: 16.11.2023
+contorul de legaturi: 1
+drepturi de acces user: RW-
+drepturi de acces grup: R--
+drepturi de acces altii: R--
+
