@@ -709,7 +709,6 @@ int main(int argc, char **argv)
     int wpid = 0;
     while ((wpid = wait(&status)) > 0)
     {
-        wait(&status);
         if (WIFEXITED(status))
         {
             printf("S-a incheiat procesul cu PID-ul %d codul %d status %d.\n", wpid, status, WEXITSTATUS(status));
