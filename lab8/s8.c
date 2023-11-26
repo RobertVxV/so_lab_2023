@@ -14,8 +14,10 @@
 
 #define WIDTH_OFFSET 18
 #define HEIGHT_OFFSET 22
+#define PIXELS_OFFSET 54
 
 #define MAX_FILE_PATH 1024
+#define MAX_FILE_NAME 256
 #define BUFFER 4096
 
 int getChars(char *string)
@@ -273,7 +275,7 @@ void processBMPFile(char *input_filename, int output_fd)
     int file_descriptor = open(input_filename, O_RDONLY);
     if (file_descriptor == -1)
     {
-        printf("Error opening file for reading: %s", input_filename);
+        printf("Error opening file for reading: %s\n", input_filename);
         return;
     }
 
@@ -338,7 +340,7 @@ void processRegularFile(char *input_filename, int output_fd)
     int file_descriptor = open(input_filename, O_RDONLY);
     if (file_descriptor == -1)
     {
-        printf("Error opening file for reading: %s", input_filename);
+        printf("Error opening file for reading: %s\n", input_filename);
         return;
     }
 
@@ -389,7 +391,7 @@ void processDirectory(char *input_filename, int output_fd)
     int file_descriptor = open(input_filename, O_RDONLY);
     if (file_descriptor == -1)
     {
-        printf("Error opening file for reading: %s", input_filename);
+        printf("Error opening file for reading: %s\n", input_filename);
         return;
     }
 
@@ -428,7 +430,7 @@ void processSymLink(char *input_filename, int output_fd)
     int file_descriptor = open(input_filename, O_RDONLY);
     if (file_descriptor == -1)
     {
-        printf("Error opening file for reading: %s", input_filename);
+        printf("Error opening file for reading: %s\n", input_filename);
         return;
     }
 
@@ -470,7 +472,7 @@ int getLines(char *filename)
     int file_descriptor = open(filename, O_RDONLY);
     if (file_descriptor == -1)
     {
-        printf("Error opening file for reading: %s", filename);
+        printf("Error opening file for reading: %s\n", filename);
         return 0;
     }
 
@@ -508,9 +510,88 @@ void removeExtension(char *filename)
 
 int convertGrayscaleBMPFile(char *filename)
 {
-    // to be implemented
+    int file_descriptor = open(filename, O_RDWR);
+    if (file_descriptor == -1)
+    {
+        printf("Error opening file for reading: %s\n", filename);
+        return -1;
+    }
+
+    // image processing
+
+    int width = 0;
+    int height = 0;
+    int stride = (width * 3 + 3) & ~3; // calculating the next integer value divisible with 4
+    int padding = stride - width * 3;  // padding is the remaining space until we have multiple of 4
+
+    int retvalWidthHeight = getBMPWidthHeight(file_descriptor, &width, &height);
+    if (retvalWidthHeight != 0)
+    {
+        printf("Error getting width and height.\n");
+        return -1; // error
+    }
+
+    unsigned char pixel_buffer[3];
+
+    int res = lseek(file_descriptor, PIXELS_OFFSET, SEEK_SET);
+    if (res == -1)
+    {
+        return -1;
+    }
+
+    for (int i = 0; i < height; i++)
+    {
+        for (int j = 0; j < width; j++)
+        {
+            if (read(file_descriptor, pixel_buffer, 3) != 3)
+            {
+                printf("Error at reading pixels. %d %d\n", i, j);
+                return -1;
+            }
+
+            unsigned char gray_color = 0.299 * pixel_buffer[0] + 0.587 * pixel_buffer[1] + 0.114 * pixel_buffer[2]; // red
+            memset(pixel_buffer, gray_color, 3);
+
+            res = lseek(file_descriptor, -3, SEEK_CUR);
+            if (res == -1)
+            {
+                return -1;
+            }
+
+            if (write(file_descriptor, pixel_buffer, 3) != 3)
+            {
+                printf("Error at writing pixels.%d %d\n", i, j);
+                return -1;
+            }
+        }
+
+        if (read(file_descriptor, pixel_buffer, padding) != padding)
+        {
+            printf("Error at reading pixels.\n"); // read the rest padding space for current row
+            return -1;
+        }
+
+        res = lseek(file_descriptor, -padding, SEEK_CUR);
+        if (res == -1)
+        {
+            return -1;
+        }
+
+        if (write(file_descriptor, pixel_buffer, padding) != padding)
+        {
+            printf("Error at writing pixels.\n"); // then write it again and go to next row.
+            return -1;
+        }
+    }
+
+    if (close(file_descriptor) != 0)
+    {
+        printf("Eroare la inchiderea fisierului pentru editare BMP la grayscale.\n");
+        return -1;
+    }
+
     return 0;
-} 
+}
 
 int main(int argc, char **argv)
 {
@@ -544,13 +625,13 @@ int main(int argc, char **argv)
     {
         sprintf(input_file_path, "./%s%s", argv[1], dir_entry->d_name);
 
-        char file_name[256];
-        sprintf(file_name, "%s", dir_entry->d_name);
-        if (isRegularFile(input_file_path))
+        char output_file_name[MAX_FILE_NAME];
+        sprintf(output_file_name, "%s", dir_entry->d_name);
+        if (isRegularFile(input_file_path)) // don't remove dot for directories.
         {
-            removeExtension(file_name); // don't remove dot for directories.
+            removeExtension(output_file_name);
         }
-        sprintf(output_file_path, "./%s%s_statistica.txt", argv[2], file_name);
+        sprintf(output_file_path, "./%s%s_statistica.txt", argv[2], output_file_name);
 
         int output_fd = open(output_file_path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
         if (output_fd == -1)
@@ -584,18 +665,6 @@ int main(int argc, char **argv)
                 else if (hasExtension(input_file_path, ".bmp"))
                 {
                     processBMPFile(input_file_path, output_fd);
-                    if ((pid = fork()) < 0)
-                    {
-                        perror("Eroare");
-                        exit(1);
-                    }
-                    if (pid == 0)
-                    {
-                        int retval = 0;
-                        retval = convertGrayscaleBMPFile(input_file_path);
-                        exit(retval);
-                    }
-                        
                 }
                 else
                 {
@@ -611,18 +680,52 @@ int main(int argc, char **argv)
             processDirectory(input_file_path, output_fd);
         }
 
+        if (isRegularFile(input_file_path) && hasExtension(input_file_path, ".bmp") && !isSymLink(input_file_path))
+        {
+            if ((pid = fork()) < 0)
+            {
+                perror("Eroare");
+                exit(1);
+            }
+            if (pid == 0)
+            {
+                int retval = 0;
+                retval = convertGrayscaleBMPFile(input_file_path);
+                if (retval != 0)
+                {
+                    printf("Imaginea %s, nu s-a convertit cu succes.\n", input_file_path);
+                }
+                exit(retval);
+            }
+        }
+
         if (close(output_fd) != 0)
         {
             printf("Eroare la inchiderea fisierului de scriere.\n");
         }
+    }
 
-        int status = 0;
+    int status = 0;
+    int wpid = 0;
+    while ((wpid = wait(&status)) > 0)
+    {
         wait(&status);
         if (WIFEXITED(status))
         {
-            lines = WEXITSTATUS(status);
+            printf("S-a incheiat procesul cu PID-ul %d codul %d status %d.\n", wpid, status, WEXITSTATUS(status));
         }
-        printf("S-a incheiat procesul cu PID-ul %d si codul %d scriind %d linii.\n", pid, status, lines);
+    }
+
+    if (closedir(input_dir) != 0)
+    {
+        printf("Eroare la inchiderea directorului de citire.");
+        exit(-1);
+    }
+
+    if (closedir(output_dir) != 0)
+    {
+        printf("Eroare la inchidere directorului de scriere.");
+        exit(-1);
     }
 
     return 0;
