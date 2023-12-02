@@ -545,38 +545,6 @@ int getBMPBytesPerPixel(char *filename)
     return number;
 }
 
-uint32_t getBMPRaserDataLocation(char *filename)
-{
-    int file_descriptor = open(filename, O_RDWR);
-    if (file_descriptor == -1)
-    {
-        printf("Error opening file for reading: %s\n", filename);
-        return -1;
-    }
-
-    int res = lseek(file_descriptor, DATA_OFFSET, SEEK_SET);
-    if (res == -1)
-    {
-        return -1;
-    }
-
-    uint32_t raserdata;
-
-    if (read(file_descriptor, &raserdata, 2) != 2)
-    {
-        printf("Could not read bitcount field.\n");
-        return -1;
-    }
-
-    if (close(file_descriptor) != 0)
-    {
-        printf("Eroare la inchiderea fisierului pentru editare BMP la grayscale.\n");
-        return -1;
-    }
-
-    return raserdata;
-}
-
 int convertGrayscaleBMPFile(char *filename)
 {
     int file_descriptor = open(filename, O_RDWR);
