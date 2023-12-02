@@ -11,14 +11,17 @@
 #include <time.h>
 #include <dirent.h>
 #include <string.h>
+#include <math.h>
 
 #define WIDTH_OFFSET 18
 #define HEIGHT_OFFSET 22
-#define PIXELS_OFFSET 54
+#define BITCOUNT_OFFSET 28
+#define DATA_OFFSET 10
+#define COLORTABLE_OFFSET 54
 
 #define MAX_FILE_PATH 1024
 #define MAX_FILE_NAME 256
-#define BUFFER 4096
+#define BUFFER 4098 //is divisible by 3 for bmp
 
 int getChars(char *string)
 {
@@ -508,6 +511,72 @@ void removeExtension(char *filename)
     filename[index] = 0;
 }
 
+int getBMPBytesPerPixel(char *filename)
+{
+    int file_descriptor = open(filename, O_RDWR);
+    if (file_descriptor == -1)
+    {
+        printf("Error opening file for reading: %s\n", filename);
+        return -1;
+    }
+
+    int res = lseek(file_descriptor, BITCOUNT_OFFSET, SEEK_SET);
+    if (res == -1)
+    {
+        return -1;
+    }
+
+    char bitcount_field[2];
+
+    if (read(file_descriptor, bitcount_field, 2) != 2)
+    {
+        printf("Could not read bitcount field.\n");
+        return -1;
+    }
+
+    int number = bitcount_field[0] | bitcount_field[1] << 8;
+
+    if (close(file_descriptor) != 0)
+    {
+        printf("Eroare la inchiderea fisierului pentru editare BMP la grayscale.\n");
+        return -1;
+    }
+
+    return number;
+}
+
+uint32_t getBMPRaserDataLocation(char *filename)
+{
+    int file_descriptor = open(filename, O_RDWR);
+    if (file_descriptor == -1)
+    {
+        printf("Error opening file for reading: %s\n", filename);
+        return -1;
+    }
+
+    int res = lseek(file_descriptor, DATA_OFFSET, SEEK_SET);
+    if (res == -1)
+    {
+        return -1;
+    }
+
+    uint32_t raserdata;
+
+    if (read(file_descriptor, &raserdata, 2) != 2)
+    {
+        printf("Could not read bitcount field.\n");
+        return -1;
+    }
+
+    if (close(file_descriptor) != 0)
+    {
+        printf("Eroare la inchiderea fisierului pentru editare BMP la grayscale.\n");
+        return -1;
+    }
+
+    return raserdata;
+}
+
 int convertGrayscaleBMPFile(char *filename)
 {
     int file_descriptor = open(filename, O_RDWR);
@@ -519,69 +588,114 @@ int convertGrayscaleBMPFile(char *filename)
 
     // image processing
 
-    int width = 0;
-    int height = 0;
-    int stride = (width * 3 + 3) & ~3; // calculating the next integer value divisible with 4
-    int padding = stride - width * 3;  // padding is the remaining space until we have multiple of 4
+    int bytes_per_pixel = getBMPBytesPerPixel(filename);
 
-    int retvalWidthHeight = getBMPWidthHeight(file_descriptor, &width, &height);
-    if (retvalWidthHeight != 0)
+    if (bytes_per_pixel < 4)
     {
-        printf("Error getting width and height.\n");
-        return -1; // error
+        return 0; // monochrome picture already black and white
     }
 
-    unsigned char pixel_buffer[3];
+    unsigned char pixel_buffer[BUFFER];
+    memset(pixel_buffer, 0, sizeof(pixel_buffer));
 
-    int res = lseek(file_descriptor, PIXELS_OFFSET, SEEK_SET);
-    if (res == -1)
+    if (bytes_per_pixel <= 8)
     {
-        return -1;
-    }
+        uint32_t numcolors = pow(2, bytes_per_pixel);
+        uint32_t size = 4 * numcolors;
 
-    for (int i = 0; i < height; i++)
-    {
-        for (int j = 0; j < width; j++)
+        int res = lseek(file_descriptor, COLORTABLE_OFFSET, SEEK_SET);
+        if (res == -1)
         {
-            if (read(file_descriptor, pixel_buffer, 3) != 3)
-            {
-                printf("Error at reading pixels. %d %d\n", i, j);
-                return -1;
-            }
-
-            unsigned char gray_color = 0.299 * pixel_buffer[0] + 0.587 * pixel_buffer[1] + 0.114 * pixel_buffer[2]; // red
-            memset(pixel_buffer, gray_color, 3);
-
-            res = lseek(file_descriptor, -3, SEEK_CUR);
-            if (res == -1)
-            {
-                return -1;
-            }
-
-            if (write(file_descriptor, pixel_buffer, 3) != 3)
-            {
-                printf("Error at writing pixels.%d %d\n", i, j);
-                return -1;
-            }
+            return -1;
         }
-
-        if (read(file_descriptor, pixel_buffer, padding) != padding)
+        if ((read(file_descriptor, pixel_buffer, size)) != size)
         {
-            printf("Error at reading pixels.\n"); // read the rest padding space for current row
+            printf("Error at reading.\n");
             return -1;
         }
 
-        res = lseek(file_descriptor, -padding, SEEK_CUR);
+        for (int i = 0; i < size; i = i + 4) // size max 1024 (4*256)
+        {
+            unsigned char gray_color = 0.299 * pixel_buffer[i] + 0.587 * pixel_buffer[i + 1] + 0.114 * pixel_buffer[i + 2];
+            memset(pixel_buffer + i, gray_color, 3);
+        }
+
+        res = lseek(file_descriptor, COLORTABLE_OFFSET, SEEK_SET);
         if (res == -1)
         {
             return -1;
         }
 
-        if (write(file_descriptor, pixel_buffer, padding) != padding)
+        if ((write(file_descriptor, pixel_buffer, size)) != size)
         {
-            printf("Error at writing pixels.\n"); // then write it again and go to next row.
+            printf("Error at writing.\n");
             return -1;
         }
+
+        return 0;
+    }
+
+    int width = 0;
+    int height = 0;
+
+    int retvalWidthHeight = getBMPWidthHeight(file_descriptor, &width, &height);
+    if (retvalWidthHeight != 0)
+    {
+        printf("Error getting width and height.\n");
+        return -1;
+    }
+
+    int size = width * height;
+
+    int res = lseek(file_descriptor, COLORTABLE_OFFSET, SEEK_SET);
+    if (res == -1)
+    {
+        return -1;
+    }
+
+    int reads = 0;
+
+    if ((reads = read(file_descriptor, pixel_buffer, BUFFER)) == -1)
+    {
+        printf("Error at reading.\n");
+        return -1;
+    }
+
+    int i = 0;
+    int pixel_byte = 0;
+
+    while (pixel_byte < size)
+    {
+        if (reads < 3)
+        {
+            break;
+        }
+
+        if (i + 2 > reads)
+        {
+            i = 0;
+
+            res = lseek(file_descriptor, -reads, SEEK_CUR);
+            if (res == -1)
+            {
+                return -1;
+            }
+
+            if (write(file_descriptor, pixel_buffer, reads) != reads)
+            {
+                printf("Error at writing pixels.\n");
+                return -1;
+            }
+
+            reads = read(file_descriptor, pixel_buffer, BUFFER);
+            continue;
+        }
+
+        unsigned char gray_color = 0.299 * pixel_buffer[i] + 0.587 * pixel_buffer[i + 1] + 0.114 * pixel_buffer[i + 2];
+        memset(pixel_buffer + i, gray_color, 3);
+
+        i = i + 3;
+        pixel_byte++;
     }
 
     if (close(file_descriptor) != 0)
