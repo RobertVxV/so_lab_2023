@@ -619,8 +619,6 @@ int convertGrayscaleBMPFile(char *filename)
             return -1;
         }
 
-        int size = width * height;
-
         int res = lseek(file_descriptor, COLORTABLE_OFFSET, SEEK_SET);
         if (res == -1)
         {
@@ -636,11 +634,10 @@ int convertGrayscaleBMPFile(char *filename)
         }
 
         int i = 0;
-        int pixel_byte = 0;
 
-        while (pixel_byte < size)
+        while (1)
         {
-            if (reads < 3)
+            if (reads < 3) // not a pixel read
             {
                 break;
             }
@@ -669,7 +666,6 @@ int convertGrayscaleBMPFile(char *filename)
             memset(pixel_buffer + i, gray_color, 3);
 
             i = i + 3;
-            pixel_byte++;
         }
     }
 
