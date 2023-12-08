@@ -708,6 +708,13 @@ int main(int argc, char **argv)
 
     while ((dir_entry = readdir(input_dir)) != NULL)
     {
+        int size = strlen(argv[1]) + strlen(dir_entry->d_name) + 1;
+        if (size > MAX_FILE_PATH - 1 - 1) // 1 for terminator, 1 for array-1
+        {
+            printf("File path too big for reading.");
+            continue;
+        }
+
         sprintf(input_file_path, "./%s%s", argv[1], dir_entry->d_name);
 
         char output_file_name[MAX_FILE_NAME];
@@ -723,13 +730,6 @@ int main(int argc, char **argv)
         {
             printf("Eroare la deschiderea fisierului de scriere %s.\n", output_file_path);
             exit(-1);
-        }
-
-        int size = strlen(argv[1]) + strlen(dir_entry->d_name) + 1;
-        if (size > MAX_FILE_PATH - 1 - 1) // 1 for terminator, 1 for array-1
-        {
-            printf("File path too big for reading.");
-            continue;
         }
 
         int pid = 1; // something not 0;
@@ -762,7 +762,17 @@ int main(int argc, char **argv)
 
         else if (isDirectory(input_file_path))
         {
-            processDirectory(input_file_path, output_fd);
+            if ((pid = fork()) < 0)
+            {
+                perror("Eroare");
+                exit(1);
+            }
+            if (pid == 0)
+            {
+                processDirectory(input_file_path, output_fd);
+                lines = getLines(output_file_path);
+                exit(lines);
+            }
         }
 
         if (isRegularFile(input_file_path) && hasExtension(input_file_path, ".bmp") && !isSymLink(input_file_path))
