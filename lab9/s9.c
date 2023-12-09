@@ -21,8 +21,11 @@
 
 #define MAX_FILE_PATH 1024
 #define MAX_FILE_NAME 256
-#define BUFFER 4098 // is divisible by 3 for bmp
+#define BUFFER 4098     // is divisible by 3 for bmp
+#define TIME_BUFFER 11  // 2 for day, 2 for month, 4 for year, 1 for terminator and 2 dots for separation - 11
+#define RIGHTS_BUFFER 4 // read write execute terminator
 
+// gets string and counts every byte until terminator is met and returns the number of bytes
 int getChars(char *string)
 {
     int chars = 0;
@@ -45,6 +48,7 @@ int getFileUID(char *filename)
     return st.st_uid;
 }
 
+// gets file full path and return only the file name
 char *getFileName(char *input_file_path)
 {
     char *filename = strrchr(input_file_path, '/');
@@ -75,6 +79,7 @@ int getLinkSize(char *filename)
     return st.st_size;
 }
 
+// returns a string of file st_mtime formatted to "day.month.year"
 char *getFileLastModification(char *filename, char *buffer)
 {
     struct stat st;
@@ -228,7 +233,7 @@ int getBMPWidthHeight(int fd, int *width, int *height)
     return 0;
 }
 
-int isRegularFile(char *filename)
+uint8_t isRegularFile(char *filename)
 {
     struct stat st;
     if (stat(filename, &st) == -1)
@@ -238,7 +243,7 @@ int isRegularFile(char *filename)
     return (st.st_mode & S_IFMT) == S_IFREG;
 }
 
-int isDirectory(char *filename)
+uint8_t isDirectory(char *filename)
 {
     struct stat st;
     if (stat(filename, &st) == -1)
@@ -248,7 +253,7 @@ int isDirectory(char *filename)
     return (st.st_mode & S_IFMT) == S_IFDIR;
 }
 
-int isSymLink(char *filename)
+uint8_t isSymLink(char *filename)
 {
     struct stat st;
     if (lstat(filename, &st) == -1)
@@ -258,7 +263,7 @@ int isSymLink(char *filename)
     return S_ISLNK(st.st_mode);
 }
 
-int hasExtension(char *filename, char *extension)
+uint8_t hasExtension(char *filename, char *extension)
 {
     char *res = strstr(filename, extension); // search position
     if (res == NULL)
@@ -285,20 +290,20 @@ void processBMPFile(char *input_filename, int output_fd)
     int file_size = getFileSize(input_filename);
     int file_uid = getFileUID(input_filename);
 
-    char time_buffer[50];
+    char time_buffer[TIME_BUFFER];
 
     char *modified_time = getFileLastModification(input_filename, time_buffer);
     int number_of_links = getFileNoOfHardLinks(input_filename);
 
-    char user_rights_buffer[4];
-    char group_rights_buffer[4];
-    char others_rights_buffer[4];
+    char user_rights_buffer[RIGHTS_BUFFER];
+    char group_rights_buffer[RIGHTS_BUFFER];
+    char others_rights_buffer[RIGHTS_BUFFER];
 
     char *user_rights = getUserRightsForFile(input_filename, user_rights_buffer);
     char *group_rights = getGroupRightsForFile(input_filename, group_rights_buffer);
     char *others_rights = getOthersRightsForFile(input_filename, others_rights_buffer);
 
-    char temporary_string[50];
+    char temporary_string[BUFFER];
 
     int bmp_width = 0;
     int bmp_height = 0;
@@ -310,31 +315,30 @@ void processBMPFile(char *input_filename, int output_fd)
         printf("An error has encountered while trying to get the width and height.");
     }
 
-    sprintf(temporary_string, "nume fisier: %s\n", getFileName(input_filename));
+    snprintf(temporary_string, sizeof(temporary_string), "nume fisier: %s\n", getFileName(input_filename));
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "inaltime: %d\n", bmp_width);
+    snprintf(temporary_string, sizeof(temporary_string), "inaltime: %d\n", bmp_width);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "lungime: %d\n", bmp_height);
+    snprintf(temporary_string, sizeof(temporary_string), "lungime: %d\n", bmp_height);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "dimensiune: %d\n", file_size);
+    snprintf(temporary_string, sizeof(temporary_string), "dimensiune: %d\n", file_size);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "identificatorul utilizatorului: %d\n", file_uid);
+    snprintf(temporary_string, sizeof(temporary_string), "identificatorul utilizatorului: %d\n", file_uid);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "timpul ultimei modificari: %s\n", modified_time);
+    snprintf(temporary_string, sizeof(temporary_string), "timpul ultimei modificari: %s\n", modified_time);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "contorul de legaturi: %d\n", number_of_links);
+    snprintf(temporary_string, sizeof(temporary_string), "contorul de legaturi: %d\n", number_of_links);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "drepturi de acces user: %s\n", user_rights);
+    snprintf(temporary_string, sizeof(temporary_string), "drepturi de acces user: %s\n", user_rights);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "drepturi de acces grup: %s\n", group_rights);
+    snprintf(temporary_string, sizeof(temporary_string), "drepturi de acces grup: %s\n", group_rights);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "drepturi de acces altii: %s\n", others_rights);
+    snprintf(temporary_string, sizeof(temporary_string), "drepturi de acces altii: %s\n", others_rights);
     write(output_fd, temporary_string, getChars(temporary_string));
-    write(output_fd, "\n", 1);
 
     if (close(file_descriptor) != 0)
     {
-        printf("Eroare la inchiderea fisierului de citire.\n");
+        printf("Error closing fisierului de citire.\n");
     }
 }
 
@@ -350,14 +354,14 @@ void processRegularFile(char *input_filename, int output_fd)
     int file_size = getFileSize(input_filename);
     int file_uid = getFileUID(input_filename);
 
-    char time_buffer[50];
+    char time_buffer[BUFFER];
 
     char *modified_time = getFileLastModification(input_filename, time_buffer);
     int number_of_links = getFileNoOfHardLinks(input_filename);
 
-    char user_rights_buffer[4];
-    char group_rights_buffer[4];
-    char others_rights_buffer[4];
+    char user_rights_buffer[RIGHTS_BUFFER];
+    char group_rights_buffer[RIGHTS_BUFFER];
+    char others_rights_buffer[RIGHTS_BUFFER];
 
     char *user_rights = getUserRightsForFile(input_filename, user_rights_buffer);
     char *group_rights = getGroupRightsForFile(input_filename, group_rights_buffer);
@@ -365,27 +369,26 @@ void processRegularFile(char *input_filename, int output_fd)
 
     char temporary_string[50];
 
-    sprintf(temporary_string, "nume fisier: %s\n", getFileName(input_filename));
+    snprintf(temporary_string, sizeof(temporary_string), "nume fisier: %s\n", getFileName(input_filename));
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "dimensiune: %d\n", file_size);
+    snprintf(temporary_string, sizeof(temporary_string), "dimensiune: %d\n", file_size);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "identificatorul utilizatorului: %d\n", file_uid);
+    snprintf(temporary_string, sizeof(temporary_string), "identificatorul utilizatorului: %d\n", file_uid);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "timpul ultimei modificari: %s\n", modified_time);
+    snprintf(temporary_string, sizeof(temporary_string), "timpul ultimei modificari: %s\n", modified_time);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "contorul de legaturi: %d\n", number_of_links);
+    snprintf(temporary_string, sizeof(temporary_string), "contorul de legaturi: %d\n", number_of_links);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "drepturi de acces user: %s\n", user_rights);
+    snprintf(temporary_string, sizeof(temporary_string), "drepturi de acces user: %s\n", user_rights);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "drepturi de acces grup: %s\n", group_rights);
+    snprintf(temporary_string, sizeof(temporary_string), "drepturi de acces grup: %s\n", group_rights);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "drepturi de acces altii: %s\n", others_rights);
+    snprintf(temporary_string, sizeof(temporary_string), "drepturi de acces altii: %s\n", others_rights);
     write(output_fd, temporary_string, getChars(temporary_string));
-    write(output_fd, "\n", 1);
 
     if (close(file_descriptor) != 0)
     {
-        printf("Eroare la inchiderea fisierului de citire.\n");
+        printf("Error closing fisierului de citire.\n");
     }
 }
 
@@ -400,31 +403,30 @@ void processDirectory(char *input_filename, int output_fd)
 
     int file_uid = getFileUID(input_filename);
 
-    char user_rights_buffer[4];
-    char group_rights_buffer[4];
-    char others_rights_buffer[4];
+    char user_rights_buffer[RIGHTS_BUFFER];
+    char group_rights_buffer[RIGHTS_BUFFER];
+    char others_rights_buffer[RIGHTS_BUFFER];
 
     char *user_rights = getUserRightsForFile(input_filename, user_rights_buffer);
     char *group_rights = getGroupRightsForFile(input_filename, group_rights_buffer);
     char *others_rights = getOthersRightsForFile(input_filename, others_rights_buffer);
 
-    char temporary_string[50];
+    char temporary_string[BUFFER];
 
-    sprintf(temporary_string, "nume director: %s\n", getFileName(input_filename));
+    snprintf(temporary_string, sizeof(temporary_string), "nume director: %s\n", getFileName(input_filename));
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "identificatorul utilizatorului: %d\n", file_uid);
+    snprintf(temporary_string, sizeof(temporary_string), "identificatorul utilizatorului: %d\n", file_uid);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "drepturi de acces user: %s\n", user_rights);
+    snprintf(temporary_string, sizeof(temporary_string), "drepturi de acces user: %s\n", user_rights);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "drepturi de acces grup: %s\n", group_rights);
+    snprintf(temporary_string, sizeof(temporary_string), "drepturi de acces grup: %s\n", group_rights);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "drepturi de acces altii: %s\n", others_rights);
+    snprintf(temporary_string, sizeof(temporary_string), "drepturi de acces altii: %s\n", others_rights);
     write(output_fd, temporary_string, getChars(temporary_string));
-    write(output_fd, "\n", 1);
 
     if (close(file_descriptor) != 0)
     {
-        printf("Eroare la inchiderea fisierului de citire.\n");
+        printf("Error closing fisierului de citire.\n");
     }
 }
 
@@ -440,37 +442,37 @@ void processSymLink(char *input_filename, int output_fd)
     int file_size = getFileSize(input_filename);
     int link_size = getLinkSize(input_filename);
 
-    char user_rights_buffer[4];
-    char group_rights_buffer[4];
-    char others_rights_buffer[4];
+    char user_rights_buffer[RIGHTS_BUFFER];
+    char group_rights_buffer[RIGHTS_BUFFER];
+    char others_rights_buffer[RIGHTS_BUFFER];
 
     char *user_rights = getUserRightsForLink(input_filename, user_rights_buffer);
     char *group_rights = getGroupRightsForLink(input_filename, group_rights_buffer);
     char *others_rights = getOthersRightsForLink(input_filename, others_rights_buffer);
 
-    char temporary_string[50];
+    char temporary_string[BUFFER];
 
-    sprintf(temporary_string, "nume legatura: %s\n", getFileName(input_filename));
+    snprintf(temporary_string, sizeof(temporary_string), "nume legatura: %s\n", getFileName(input_filename));
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "dimensiune legatura: %d\n", link_size);
+    snprintf(temporary_string, sizeof(temporary_string), "dimensiune legatura: %d\n", link_size);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "dimensiune fisier legatura: %d\n", file_size);
+    snprintf(temporary_string, sizeof(temporary_string), "dimensiune fisier legatura: %d\n", file_size);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "drepturi de acces user legatura: %s\n", user_rights);
+    snprintf(temporary_string, sizeof(temporary_string), "drepturi de acces user legatura: %s\n", user_rights);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "drepturi de acces grup legatura: %s\n", group_rights);
+    snprintf(temporary_string, sizeof(temporary_string), "drepturi de acces grup legatura: %s\n", group_rights);
     write(output_fd, temporary_string, getChars(temporary_string));
-    sprintf(temporary_string, "drepturi de acces altii legatura: %s\n", others_rights);
+    snprintf(temporary_string, sizeof(temporary_string), "drepturi de acces altii legatura: %s\n", others_rights);
     write(output_fd, temporary_string, getChars(temporary_string));
-    write(output_fd, "\n", 1);
 
     if (close(file_descriptor) != 0)
     {
-        printf("Eroare la inchiderea fisierului de citire.\n");
+        printf("Error closing fisierului de citire.\n");
     }
 }
 
-int getLines(char *filename)
+// opens filename and returns the number of new lines
+uint32_t getLines(char *filename)
 {
     int file_descriptor = open(filename, O_RDONLY);
     if (file_descriptor == -1)
@@ -493,12 +495,14 @@ int getLines(char *filename)
 
     if (close(file_descriptor) != 0)
     {
-        printf("Eroare la inchiderea fisierului de citire.\n");
+        printf("Error closing fisierului de citire.\n");
+        return 0;
     }
 
     return lineCounter;
 }
 
+// removes extension from filename
 void removeExtension(char *filename)
 {
     char *pos = NULL;
@@ -538,7 +542,7 @@ uint16_t getBMPBitsPerPixel(char *filename)
 
     if (close(file_descriptor) != 0)
     {
-        printf("Eroare la inchiderea fisierului pentru editare BMP la grayscale.\n");
+        printf("Error closing fisierului pentru editare BMP la grayscale.\n");
         return 0;
     }
 
@@ -671,14 +675,14 @@ int convertGrayscaleBMPFile(char *filename)
 
     if (close(file_descriptor) != 0)
     {
-        printf("Eroare la inchiderea fisierului pentru editare BMP la grayscale.\n");
+        printf("Error closing BMP file at grayscale editing.\n");
         return -1;
     }
 
     return 0;
 }
 
-int countCorrectLinesForRegex(char *filepath, char *path_for_regex, char* ch)
+int countCorrectLinesForRegex(char *filepath, char *path_for_regex, char *ch)
 {
     int pid = 1;
     int pfd1[2];
@@ -688,75 +692,117 @@ int countCorrectLinesForRegex(char *filepath, char *path_for_regex, char* ch)
 
     if (pipe(pfd1) < 0)
     {
-        perror("Eroare la crearea pipe 1\n");
-        exit(1);
+        perror("Error creating pipe 1\n");
+        return -1;
     }
 
     if (pipe(pfd2) < 0)
     {
-        perror("Eroare la crearea pipe 2\n");
-        exit(1);
+        perror("Error creating pipe 2\n");
+        return -1;
     }
 
     if ((pid = fork()) < 0)
     {
-        perror("Eroare la fork\n");
-        exit(1);
+        perror("Error at fork.\n");
+        return -1;
     }
 
     if (pid == 0)
     {
         // Child process: "cat" command
-        close(pfd1[0]);
-        dup2(pfd1[1], 1);
-        close(pfd1[1]);
+        if (close(pfd1[0]) == -1)
+        {
+            printf("Error closing pfd1[1]\n");
+            return -1;
+        }
+        if (dup2(pfd1[1], 1) == -1)
+        {
+            printf("Error at dup2 pfd1[1]\n");
+            return -1;
+        }
+        if (close(pfd1[1]) == -1)
+        {
+            printf("Error closing pfd1[1]\n");
+            return -1;
+        }
         execlp("cat", "cat", filepath, NULL);
-        perror("Eroare la exec cat\n");
+        perror("Error at exec cat\n");
         exit(1);
     }
 
     if ((pid = fork()) < 0)
     {
-        perror("Eroare la fork\n");
-        exit(1);
+        perror("Error at fork.\n");
+        return -1;
     }
 
     if (pid == 0)
     {
         // Child process: "regex.sh" command
-        close(pfd1[1]);
-        close(pfd2[0]);
-        dup2(pfd1[0], 0);
-        dup2(pfd2[1], 1);
-        close(pfd1[0]);
-        close(pfd2[1]);
+        if (close(pfd1[1]) == -1)
+        {
+            printf("Error closing pfd1[1]\n");
+            return -1;
+        }
+        if (close(pfd2[0]) == -1)
+        {
+            printf("Error closing pfd2[0]\n");
+            return -1;
+        }
+        if (dup2(pfd1[0], 0) == -1)
+        {
+            printf("Error at dup2 pfd1[0]\n");
+            return -1;
+        }
+        if (dup2(pfd2[1], 1) == -1)
+        {
+            printf("Error at dup2 pfd2[1]\n");
+            return -1;
+        }
+        if (close(pfd1[0]) == -1)
+        {
+            printf("Error closing pfd1[0]\n");
+            return -1;
+        }
+        if (close(pfd2[1]) == -1)
+        {
+            printf("Error closing pfd2[1]\n");
+            return -1;
+        }
         execlp(path_for_regex, path_for_regex, ch, NULL);
-        perror("Eroare la exec regex.sh\n");
-        exit(1);
+        perror("Error at exec regex.sh\n");
+        return -1;
     }
 
     int counter_buff = 0;
 
     // Parent process
-    if(close(pfd1[0]) != 0)
+    if (close(pfd1[0]) == -1)
     {
-        printf("Eroare la inchiderea pfd1[0]");
+        printf("Error closing pfd1[0]\n");
+        return -1;
     }
-    if(close(pfd1[1]) != 0)
+    if (close(pfd1[1]) == -1)
     {
-        printf("Eroare la inchiderea pfd1[1]");
+        printf("Error closing pfd1[1]\n");
+        return -1;
     }
-    if(close(pfd2[1]) != 0)
+    if (close(pfd2[1]) == -1)
     {
-        printf("Eroare la inchiderea pfd2[1]");
+        printf("Error closing pfd2[1]\n");
+        return -1;
     }
-    if((stream = fdopen(pfd2[0], "r")) == NULL)
+    if ((stream = fdopen(pfd2[0], "r")) == NULL)
     {
         return -1;
     }
     fscanf(stream, "%d", &counter_buff);
-    printf("counter_buff: %d\n", counter_buff);
-    close(pfd2[0]);
+    if (close(pfd2[0]) == -1)
+    {
+        printf("Error closing pfd2[0]\n");
+        return -1;
+    }
 
     return counter_buff;
 }
@@ -771,6 +817,7 @@ int main(int argc, char **argv)
 
     DIR *input_dir = opendir(argv[1]);
     DIR *output_dir = opendir(argv[2]);
+
     if (input_dir == NULL)
     {
         perror(argv[1]);
@@ -799,20 +846,20 @@ int main(int argc, char **argv)
             continue;
         }
 
-        sprintf(input_file_path, "./%s%s", argv[1], dir_entry->d_name);
+        snprintf(input_file_path, sizeof(input_file_path), "./%s%s", argv[1], dir_entry->d_name);
 
         char output_file_name[MAX_FILE_NAME];
-        sprintf(output_file_name, "%s", dir_entry->d_name);
+        snprintf(output_file_name, sizeof(output_file_name), "%s", dir_entry->d_name);
         if (isRegularFile(input_file_path)) // don't remove dot for directories.
         {
             removeExtension(output_file_name);
         }
-        sprintf(output_file_path, "./%s%s_statistica.txt", argv[2], output_file_name);
+        snprintf(output_file_path, sizeof(output_file_path), "./%s%s_statistica.txt", argv[2], output_file_name);
 
         int output_fd = open(output_file_path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
         if (output_fd == -1)
         {
-            printf("Eroare la deschiderea fisierului de scriere %s.\n", output_file_path);
+            printf("Eroare la deschiderea fisierului de scriere: %s.\n", output_file_path);
             exit(-1);
         }
 
@@ -847,7 +894,14 @@ int main(int argc, char **argv)
             {
                 int counter_buff = 0;
                 counter_buff = countCorrectLinesForRegex(input_file_path, "./regex.sh", argv[3]);
-                counter = counter + counter_buff;
+                if (counter_buff == -1)
+                {
+                    printf("A aparut o eroare la procesarea numarului de linii corecte pentru fisierul: %s", input_file_path);
+                }
+                else
+                {
+                    counter = counter + counter_buff;
+                }
             }
         }
 
@@ -911,7 +965,7 @@ int main(int argc, char **argv)
 
     if (closedir(output_dir) != 0)
     {
-        printf("Eroare la inchidere directorului de scriere.");
+        printf("Eroare la inchiderea directorului de scriere.");
         exit(-1);
     }
 
