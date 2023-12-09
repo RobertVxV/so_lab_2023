@@ -517,13 +517,13 @@ uint16_t getBMPBitsPerPixel(char *filename)
     if (file_descriptor == -1)
     {
         printf("Error opening file for reading: %s\n", filename);
-        return -1;
+        return 0;
     }
 
     int res = lseek(file_descriptor, BITCOUNT_OFFSET, SEEK_SET);
     if (res == -1)
     {
-        return -1;
+        return 0;
     }
 
     uint8_t bitcount_field[2];
@@ -531,7 +531,7 @@ uint16_t getBMPBitsPerPixel(char *filename)
     if (read(file_descriptor, bitcount_field, 2) != 2)
     {
         printf("Could not read bitcount field.\n");
-        return -1;
+        return 0;
     }
 
     uint16_t number = bitcount_field[0] | bitcount_field[1] << 8;
@@ -539,7 +539,7 @@ uint16_t getBMPBitsPerPixel(char *filename)
     if (close(file_descriptor) != 0)
     {
         printf("Eroare la inchiderea fisierului pentru editare BMP la grayscale.\n");
-        return -1;
+        return 0;
     }
 
     return number;
@@ -678,11 +678,94 @@ int convertGrayscaleBMPFile(char *filename)
     return 0;
 }
 
+int countCorrectLinesForRegex(char *filepath, char *path_for_regex, char* ch)
+{
+    int pid = 1;
+    int pfd1[2];
+    int pfd2[2];
+
+    FILE *stream = NULL;
+
+    if (pipe(pfd1) < 0)
+    {
+        perror("Eroare la crearea pipe 1\n");
+        exit(1);
+    }
+
+    if (pipe(pfd2) < 0)
+    {
+        perror("Eroare la crearea pipe 2\n");
+        exit(1);
+    }
+
+    if ((pid = fork()) < 0)
+    {
+        perror("Eroare la fork\n");
+        exit(1);
+    }
+
+    if (pid == 0)
+    {
+        // Child process: "cat" command
+        close(pfd1[0]);
+        dup2(pfd1[1], 1);
+        close(pfd1[1]);
+        execlp("cat", "cat", filepath, NULL);
+        perror("Eroare la exec cat\n");
+        exit(1);
+    }
+
+    if ((pid = fork()) < 0)
+    {
+        perror("Eroare la fork\n");
+        exit(1);
+    }
+
+    if (pid == 0)
+    {
+        // Child process: "regex.sh" command
+        close(pfd1[1]);
+        close(pfd2[0]);
+        dup2(pfd1[0], 0);
+        dup2(pfd2[1], 1);
+        close(pfd1[0]);
+        close(pfd2[1]);
+        execlp(path_for_regex, path_for_regex, ch, NULL);
+        perror("Eroare la exec regex.sh\n");
+        exit(1);
+    }
+
+    int counter_buff = 0;
+
+    // Parent process
+    if(close(pfd1[0]) != 0)
+    {
+        printf("Eroare la inchiderea pfd1[0]");
+    }
+    if(close(pfd1[1]) != 0)
+    {
+        printf("Eroare la inchiderea pfd1[1]");
+    }
+    if(close(pfd2[1]) != 0)
+    {
+        printf("Eroare la inchiderea pfd2[1]");
+    }
+    if((stream = fdopen(pfd2[0], "r")) == NULL)
+    {
+        return -1;
+    }
+    fscanf(stream, "%d", &counter_buff);
+    printf("counter_buff: %d\n", counter_buff);
+    close(pfd2[0]);
+
+    return counter_buff;
+}
+
 int main(int argc, char **argv)
 {
-    if (argc != 3)
+    if (argc != 4)
     {
-        printf("Usage error: %s <director_intrare> <director_iesire>\n", argv[0]);
+        printf("Usage error: %s <director_intrare> <director_iesire> <c>\n", argv[0]);
         exit(-1);
     }
 
@@ -705,6 +788,7 @@ int main(int argc, char **argv)
     char output_file_path[MAX_FILE_PATH];
 
     int lines = 0;
+    int counter = 0;
 
     while ((dir_entry = readdir(input_dir)) != NULL)
     {
@@ -732,13 +816,13 @@ int main(int argc, char **argv)
             exit(-1);
         }
 
-        int pid = 1; // something not 0;
+        int pid = 1;
 
         if (isRegularFile(input_file_path))
         {
             if ((pid = fork()) < 0)
             {
-                perror("Eroare");
+                perror("Eroare la fork\n");
                 exit(1);
             }
             if (pid == 0)
@@ -758,13 +842,20 @@ int main(int argc, char **argv)
                 lines = getLines(output_file_path);
                 exit(lines);
             }
+
+            if (!hasExtension(input_file_path, ".bmp"))
+            {
+                int counter_buff = 0;
+                counter_buff = countCorrectLinesForRegex(input_file_path, "./regex.sh", argv[3]);
+                counter = counter + counter_buff;
+            }
         }
 
         else if (isDirectory(input_file_path))
         {
             if ((pid = fork()) < 0)
             {
-                perror("Eroare");
+                perror("Eroare la fork\n");
                 exit(1);
             }
             if (pid == 0)
@@ -779,7 +870,7 @@ int main(int argc, char **argv)
         {
             if ((pid = fork()) < 0)
             {
-                perror("Eroare");
+                perror("Eroare la fork\n");
                 exit(1);
             }
             if (pid == 0)
@@ -809,6 +900,8 @@ int main(int argc, char **argv)
             printf("S-a incheiat procesul cu PID-ul %d codul %d status %d.\n", wpid, status, WEXITSTATUS(status));
         }
     }
+
+    printf("Au fost identificate in total %d propozitii corecte care contin caracterul %c.\n", counter, argv[3][0]);
 
     if (closedir(input_dir) != 0)
     {

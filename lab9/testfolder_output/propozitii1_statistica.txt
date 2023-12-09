@@ -1,0 +1,9 @@
+nume fisier: propozitii1.txt
+dimensiune: 254
+identificatorul utilizatorului: 1000
+timpul ultimei modificari: 9.12.2023
+contorul de legaturi: 1
+drepturi de acces user: RW-
+drepturi de acces grup: R--
+drepturi de acces altii: R--
+
